@@ -40,5 +40,5 @@ pip install -r requirements.txt
 ```python
 python Source/Train.py  --dataset BreastMNIST  --model resnet50 --CCE_Loss_use --batch-size 24 --learning-rate 0.0001 --epochs 100
 ```
-The complete code will be made publicly available after the paper is accepted. ** Coming Soon.**
+The complete code will be made publicly available after the paper is accepted. **Coming Soon.**
 
