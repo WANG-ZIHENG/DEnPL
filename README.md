@@ -1,7 +1,7 @@
 
 
 
-# Fundust image classification
+# Gastro image classification
 
 [![GitHub license](https://img.shields.io/github/license/用户名/仓库名)](https://github.com/用户名/仓库名/blob/main/LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
@@ -10,7 +10,7 @@
 
 ## 🛠️ Install dependencies
 ```python
-conda create -n PDM python=3.11.7
+conda create -n PDM python=3.8.10
 conda activate PDM
 pip install -r requirements.txt
 ```
