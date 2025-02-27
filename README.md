@@ -46,5 +46,11 @@ python Source/Train.py  --dataset BreastMNIST  --model resnet50 --CCE_Loss_use -
 | GastroVision DenseNet121 | [Google Drive](https://drive.google.com/file/d/1-pUp7WyyASmPn8-w_8gGLFmEQoo3gckK/view?usp=sharing)  |
 | Ulcerative DenseNet121   | [Google Drive](https://drive.google.com/file/d/14vNtd0juyeN1PRgWU74rDci7WUb-zprO/view?usp=sharing)  |
 
+## 🧪 only Test
+```python
+python Source/Test.py --dataset GastroVision --model DenseNet121 --CE_loss_use --CCL_loss_use --best_model_path  checkpoints/GastroVision/best_auc.pth
+python Source/Test.py --dataset Ulcerative --model DenseNet121 --CE_loss_use --CCL_loss_use --best_model_path  checkpoints/Ulcerative/best_auc.pth
+```
+
 
 **The complete code will be made publicly available after the paper is accepted. Coming Soon.**
