@@ -1,7 +1,7 @@
 
 
 
-# PDM
+# DEnPL
 
 [![GitHub license](https://img.shields.io/github/license/用户名/仓库名)](https://github.com/用户名/仓库名/blob/main/LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
@@ -10,8 +10,8 @@
 
 ## 🛠️ Install dependencies
 ```python
-conda create -n PDM python=3.8.10
-conda activate PDM
+conda create -n DEnPL python=3.8.10
+conda activate DEnPL
 pip install -r requirements.txt
 ```
 
@@ -40,5 +40,11 @@ pip install -r requirements.txt
 ```python
 python Source/Train.py  --dataset BreastMNIST  --model resnet50 --CCE_Loss_use --batch-size 24 --learning-rate 0.0001 --epochs 100
 ```
-**The complete code will be made publicly available after the paper is accepted. Coming Soon.**
 
+| Model Name               | Download Link     |
+|--------------------------|-------------------|
+| GastroVision DenseNet121 | [Google Drive](https://drive.google.com/file/d/1-pUp7WyyASmPn8-w_8gGLFmEQoo3gckK/view?usp=sharing)  |
+| Ulcerative DenseNet121   | [Google Drive](https://drive.google.com/file/d/14vNtd0juyeN1PRgWU74rDci7WUb-zprO/view?usp=sharing)  |
+
+
+**The complete code will be made publicly available after the paper is accepted. Coming Soon.**
