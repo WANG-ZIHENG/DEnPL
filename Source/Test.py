@@ -2,6 +2,8 @@ import os
 from collections import defaultdict
 import numpy as np
 import torch
+from get_features import Centers
+import copy
 
 from utils import shot_acc
 from misc import plot_confusion_matrix
@@ -50,11 +52,13 @@ def test_net(epoch, model, test_generator,cls_num_list_train, device, criterion,
         bsz = labels.shape[0]
         features, normal_output, ce_output,fea_pair_mean = model(images)
 
+        with torch.no_grad():
+            class_centers = center.update_class_centers(epoch, fea_pair_mean.detach(), labels)
         ce_output = ce_output.mean(1)
         loss, ldam_loss, logit_loss, ce_loss, supcon_loss, ccl_loss, wce_loss,similarity_loss,uncertain_loss = criterion(features, normal_output,
                                                                                           ce_output,
                                                                                           labels, fea_pair_mean,
-                                                                                          centers.class_centers,epoch)
+                                                                                          class_centers,epoch)
 
         # loss,ldam_loss,logit_loss,ce_loss,supcon_loss = criterion(features,normal_output,ce_output, labels)
 
@@ -189,3 +193,39 @@ def test_net(epoch, model, test_generator,cls_num_list_train, device, criterion,
     # artifact.add_dir(local_path="classification_report")
 
     return (test_loss / num_steps), test_metrics, num_steps
+
+
+if __name__ == '__main__':
+    from utils import get_args
+    from utils import get_datasets
+    from torch.utils import data
+    from Models import Model
+    from torch import nn
+    from losses import LDAMLoss, LogitAdjust, SupConLoss, MixLoss
+    args = get_args()
+    training_dataset, test_dataset, _ = get_datasets(args)
+    test_generator = data.DataLoader(test_dataset, args.batch_size, shuffle=False, num_workers=8)
+
+    cls_num_list = test_dataset.cls_num_list
+    n_classes = len(cls_num_list)
+    model = Model(args, n_classes=n_classes,
+                       pretrained=args.pretrain_model)  # make weights=True if you want to download pre-trained weights
+
+
+    checkpoint = torch.load(args.best_model_path, map_location=args.device)  # loading best model
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.to(args.device)
+    model.eval()
+    criterion = MixLoss(cls_num_list=cls_num_list,args = args)
+    num_list = test_generator.dataset.cls_num_list
+    wandb.init(
+               name='Test'
+               , config=args.__dict__, job_type='train', mode='offline')
+    center = Centers(training_dataset=copy.deepcopy(training_dataset), model=model, args=args,
+                          device=args.device)
+
+    with torch.no_grad():
+        test_loss, test_metrics, test_num_steps = test_net(0, model, test_generator, num_list,
+                                                           args.device, criterion, args, center)
+
+    print_metrics(test_metrics, test_num_steps)

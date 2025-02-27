@@ -15,6 +15,8 @@ from PIL import Image
 from glob import glob
 from sklearn.model_selection import train_test_split
 import pandas as pd
+import argparse
+
 class TwoCropTransform:
     """Create two crops of the same image"""
     def __init__(self, transform):
@@ -543,3 +545,60 @@ def shot_acc(train_class_count, test_class_count, class_correct, many_shot_thr=1
             median_shot.append((class_correct[i].detach().cpu().numpy() / test_class_count[i]))
 
     return np.mean(many_shot), np.mean(median_shot), np.mean(low_shot)
+def get_args():
+    parser=argparse.ArgumentParser(description='Train the model on images and target labels',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-e','--epochs', metavar='E', type=int, default=120, nargs='?', help='Number of epochs', dest='max_epochs')
+    parser.add_argument('-b','--batch-size', metavar='B', type=int, default=32, nargs='?', help='Batch size', dest='batch_size')
+    parser.add_argument('-l','--learning-rate', metavar='LR', type=float, default=3e-4, nargs='?', help='Learning rate', dest='lr')
+    if os.path.exists("/D_share"):
+        parser.add_argument('--data_root', type=str, default="/H_share/Gastro_autodl-tmp")
+    else:
+        parser.add_argument('--data_root', type=str, default="/root/autodl-tmp")
+
+    parser.add_argument('--dataset', type=str, default="breastmnist", help='GastroVision or Ulcerative or OCT2017 or chest_xray or XXXMNIST or ISIC or cifar10 or cifar100 ')
+    parser.add_argument('--other_test_dataset',  default=False ,action='store_true')
+
+    parser.add_argument('--warmup_epochs', default=5, type=int,
+                        help='warmup epochs')
+    parser.add_argument('--cos', default=True, type=bool,
+                        help='lr decays by cosine scheduler. ')
+    parser.add_argument('--schedule', default=[160, 180], nargs='*', type=int,
+                        help='learning rate schedule (when to drop lr by 10x)')
+    parser.add_argument('--IF', type=int, default=100,help="Cifar数据集下有效 100,50,10")
+    #https://github.com/MedMNIST/MedMNIST/tree/main?tab=readme-ov-file
+    #breastmnist
+    parser.add_argument('--supcon_loss_use',  default=False ,action='store_true')
+    parser.add_argument('--Logit_loss_use',  default=False ,action='store_true')
+    parser.add_argument('--LDAM_loss_use',  default=False ,action='store_true')
+    parser.add_argument('--CE_loss_use',  default=False ,action='store_true')
+    parser.add_argument('--uncertain_use', default=False ,action='store_true')
+    parser.add_argument('--feature_similarity_use', default=False ,action='store_true')
+    parser.add_argument('--WCE_loss_use', default=False, action='store_true')
+    parser.add_argument('--CCL_loss_use', default=False, action='store_true')
+    #https://github.com/yaopengUSTC/mbit-skin-cancer/blob/main/lib/loss/loss.py
+    parser.add_argument('--Focal_Loss_use', default=False ,action='store_true')
+    parser.add_argument('--LOW_Loss_use', default=False ,action='store_true')
+    parser.add_argument('--GHMC_Loss_use', default=False ,action='store_true')
+    parser.add_argument('--CCE_Loss_use', default=False ,action='store_true')
+    parser.add_argument('--MWN_Loss_use', default=False ,action='store_true')
+
+
+
+    parser.add_argument('--supcon_loss_weight', type=float, default=1)
+    parser.add_argument('--Logit_loss_weight', type=float, default=1)
+    parser.add_argument('--LDAM_loss_weight', type=float, default=1)
+    parser.add_argument('--CE_loss_weight', type=float, default=1)
+
+    parser.add_argument('--CCL_loss_weight', type=float, default=1)
+
+    parser.add_argument('--WCE_loss_weight', type=float, default=1)
+    parser.add_argument('--device',type=str, default='cuda')
+    parser.add_argument('--CE_sampling',type=str, default='double',help="double or single",choices=("single",'double'))
+    parser.add_argument('--CCL_sampling',type=str, default='double',help="double or single",choices=("single",'double'))
+    parser.add_argument('--model',type=str, default='DenseNet121',choices=("DenseNet121",'resnet10','resnet18','resnet32', 'resnet34', 'resnet50', 'resnext50_32x4d'))
+    parser.add_argument('--pretrain_model', default=False,action='store_true')
+    parser.add_argument('--data_reduce_rate', type=float, default=1,
+                        help='Rate to reduce the dataset size by class (e.g., 0.9 for 90% of original size)')
+    parser.add_argument('--best_model_path',type=str, default='')
+
+    return parser.parse_args()

@@ -16,7 +16,6 @@ from misc import print_metrics, training_curve
 from PIL import Image
 import os
 import re
-import argparse
 from collections import defaultdict
 import numpy as np
 import logging
@@ -47,62 +46,7 @@ from utils import adjust_lr
 # Setting basic parameters for the model
 ########################################
 
-def get_args():
-    parser=argparse.ArgumentParser(description='Train the model on images and target labels',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-e','--epochs', metavar='E', type=int, default=120, nargs='?', help='Number of epochs', dest='max_epochs')
-    parser.add_argument('-b','--batch-size', metavar='B', type=int, default=32, nargs='?', help='Batch size', dest='batch_size')
-    parser.add_argument('-l','--learning-rate', metavar='LR', type=float, default=3e-4, nargs='?', help='Learning rate', dest='lr')
-    if os.path.exists("/D_share"):
-        parser.add_argument('--data_root', type=str, default="/H_share/Gastro_autodl-tmp")
-    else:
-        parser.add_argument('--data_root', type=str, default="/root/autodl-tmp")
 
-    parser.add_argument('--dataset', type=str, default="breastmnist", help='GastroVision or Ulcerative or OCT2017 or chest_xray or XXXMNIST or ISIC or cifar10 or cifar100 ')
-    parser.add_argument('--other_test_dataset',  default=False ,action='store_true')
-
-    parser.add_argument('--warmup_epochs', default=5, type=int,
-                        help='warmup epochs')
-    parser.add_argument('--cos', default=True, type=bool,
-                        help='lr decays by cosine scheduler. ')
-    parser.add_argument('--schedule', default=[160, 180], nargs='*', type=int,
-                        help='learning rate schedule (when to drop lr by 10x)')
-    parser.add_argument('--IF', type=int, default=100,help="Cifar数据集下有效 100,50,10")
-    #https://github.com/MedMNIST/MedMNIST/tree/main?tab=readme-ov-file
-    #breastmnist
-    parser.add_argument('--supcon_loss_use',  default=False ,action='store_true')
-    parser.add_argument('--Logit_loss_use',  default=False ,action='store_true')
-    parser.add_argument('--LDAM_loss_use',  default=False ,action='store_true')
-    parser.add_argument('--CE_loss_use',  default=False ,action='store_true')
-    parser.add_argument('--uncertain_use', default=False ,action='store_true')
-    parser.add_argument('--feature_similarity_use', default=False ,action='store_true')
-    parser.add_argument('--WCE_loss_use', default=False, action='store_true')
-    parser.add_argument('--CCL_loss_use', default=False, action='store_true')
-    #https://github.com/yaopengUSTC/mbit-skin-cancer/blob/main/lib/loss/loss.py
-    parser.add_argument('--Focal_Loss_use', default=False ,action='store_true')
-    parser.add_argument('--LOW_Loss_use', default=False ,action='store_true')
-    parser.add_argument('--GHMC_Loss_use', default=False ,action='store_true')
-    parser.add_argument('--CCE_Loss_use', default=False ,action='store_true')
-    parser.add_argument('--MWN_Loss_use', default=False ,action='store_true')
-
-
-
-    parser.add_argument('--supcon_loss_weight', type=float, default=1)
-    parser.add_argument('--Logit_loss_weight', type=float, default=1)
-    parser.add_argument('--LDAM_loss_weight', type=float, default=1)
-    parser.add_argument('--CE_loss_weight', type=float, default=1)
-
-    parser.add_argument('--CCL_loss_weight', type=float, default=1)
-
-    parser.add_argument('--WCE_loss_weight', type=float, default=1)
-    parser.add_argument('--device',type=str, default='cuda')
-    parser.add_argument('--CE_sampling',type=str, default='double',help="double or single",choices=("single",'double'))
-    parser.add_argument('--CCL_sampling',type=str, default='double',help="double or single",choices=("single",'double'))
-    parser.add_argument('--model',type=str, default='DenseNet121',choices=("DenseNet121",'resnet10','resnet18','resnet32', 'resnet34', 'resnet50', 'resnext50_32x4d'))
-    parser.add_argument('--pretrain_model', default=False,action='store_true')
-    parser.add_argument('--data_reduce_rate', type=float, default=1,
-                        help='Rate to reduce the dataset size by class (e.g., 0.9 for 90% of original size)')
-
-    return parser.parse_args()
          
 
 args=get_args()
@@ -112,7 +56,7 @@ lr=args.lr
 device = args.device
 
 
-model_path=r'./checkpoints/'  # set path to the folder that will store model's checkpoints
+model_path=rf'./checkpoints/{args.dataset}'  # set path to the folder that will store model's checkpoints
 
 
 
@@ -122,8 +66,8 @@ global val_macro_f1_max
 
 
 try:
-   if not os.path.exists(os.path.dirname(model_path)):
-       os.makedirs(os.path.dirname(model_path))
+   if not os.path.exists(model_path):
+       os.makedirs(model_path)
 except OSError as err:
    print(err)
 
@@ -186,6 +130,8 @@ class train:
 
         val_micro_f1_max=0.0
         val_macro_f1_max=0.0
+        val_acc_max=0.0
+        val_auc_max=0.0
         epochs=[]
         lossesT=[]
         lossesV=[]
@@ -383,34 +329,57 @@ class train:
             ##############################
             # Saving best model 
             ##############################
-            
-            if val_metrics['micro_f1']>=val_micro_f1_max:
-                print('val micro f1 increased ({:.6f}-->{:.6f})'.format(val_micro_f1_max,val_metrics['micro_f1']))
-                
-                torch.save({'epoch':epoch+1,
-                            'model_state_dict':model.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict(),
-                            'scheduler': scheduler.state_dict(),
-                            'loss':val_loss},model_path+f'/C_micro_{epoch+1}_{batch_size}.pth')
-                best_micro_model_path=model_path+f'/C_micro_{epoch+1}_{batch_size}.pth'
-               
-                val_micro_f1_max=val_metrics['micro_f1']
 
-            if val_metrics['macro_f1'] >= val_macro_f1_max:
-                print('val macro f1 increased ({:.6f}-->{:.6f})'.format(val_macro_f1_max,
-                                                                                     val_metrics['macro_f1']))
-
+            if val_metrics['micro_f1'] >= val_micro_f1_max:
+                print('val micro f1 increased ({:.6f}-->{:.6f})'.format(val_micro_f1_max, val_metrics['micro_f1']))
+                best_micro_model_path = model_path + f'/best_micro.pth'
                 torch.save({'epoch': epoch + 1,
                             'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict(),
                             'scheduler': scheduler.state_dict(),
-                            'loss': val_loss}, model_path + f'/C_macro_{epoch + 1}_{batch_size}.pth')
-                best_macro_model_path = model_path + f'/C_macro_{epoch + 1}_{batch_size}.pth'
+                            'loss': val_loss}, best_micro_model_path)
+
+                val_micro_f1_max = val_metrics['micro_f1']
+
+            if val_metrics['macro_f1'] >= val_macro_f1_max:
+                print('val macro f1 increased ({:.6f}-->{:.6f})'.format(val_macro_f1_max,
+                                                                        val_metrics['macro_f1']))
+                best_macro_model_path = model_path + f'/best_macro.pth'
+                torch.save({'epoch': epoch + 1,
+                            'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'scheduler': scheduler.state_dict(),
+                            'loss': val_loss}, best_macro_model_path)
 
                 val_macro_f1_max = val_metrics['macro_f1']
 
+            if val_metrics['acc'] >= val_acc_max:
+                print('val acc increased ({:.6f}-->{:.6f})'.format(val_acc_max,
+                                                                   val_metrics['acc']))
+                best_acc_model_path = model_path + f'/best_acc.pth'
+                torch.save({'epoch': epoch + 1,
+                            'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'scheduler': scheduler.state_dict(),
+                            'loss': val_loss}, best_acc_model_path)
+                val_acc_max = val_metrics['acc']
+
+            if val_metrics['auc'] >= val_auc_max:
+                print('val auc increased ({:.6f}-->{:.6f})'.format(val_auc_max,
+                                                                   val_metrics['auc']))
+                best_auc_model_path = model_path + f'/best_auc.pth'
+                torch.save({'epoch': epoch + 1,
+                            'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'scheduler': scheduler.state_dict(),
+                            'loss': val_loss}, best_auc_model_path)
+
+                val_auc_max = val_metrics['auc']
+
             val_metrics['val_macro_f1_max'] = val_macro_f1_max
             val_metrics['val_micro_f1_max'] = val_micro_f1_max
+            val_metrics['val_auc_max'] = val_auc_max
+            val_metrics['val_acc_max'] = val_acc_max
             wandb.log(add_prefix(val_metrics, f'val'), step=epoch, commit=True)
             print('-'*10)
 
@@ -426,8 +395,8 @@ class train:
         lossesT.clear()
         lossesV.clear()
 
-        best_model_paths = {"macro":best_macro_model_path,"micro":best_micro_model_path}
-        test_metrics_dict = {"macro":None, "micro":None}
+        best_model_paths = {"macro":best_macro_model_path,"micro":best_micro_model_path,'acc':best_acc_model_path ,'auc':best_auc_model_path}
+        test_metrics_dict = {"macro":None, "micro":None,'acc':None,'auc':None}
         ############################
         #         Test
         ############################
@@ -533,7 +502,7 @@ if __name__=="__main__":
     else:
         mode = "online"
 
-    wandb.init(dir=os.path.abspath("wandb"), project="Gastro1",entity='orange_jam',
+    wandb.init(dir=os.path.abspath("wandb"), project="Gastro",entity='orange_jam',
                name=wandb_name
                , config=args.__dict__, job_type='train', mode=mode)
     wandb.run.log_code(".", include_fn=lambda path: path.endswith('.py')
